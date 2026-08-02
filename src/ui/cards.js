@@ -42,7 +42,8 @@ function render(state) {
           <span class="credit-card__pos">${index + 1} / ${cards.length}</span>
         </div>
         <div class="credit-card__balance ${negative ? 'is-negative' : ''}">${formatEUR(available)}</div>
-        <div class="credit-card__meta">${limitLabel} · tap to edit</div>
+        <div class="credit-card__meta">${limitLabel}</div>
+        <span class="credit-card__edit" aria-hidden="true">✎</span>
       </article>
       <div class="carousel__controls">
         <button type="button" class="icon-btn" data-prev aria-label="Previous card">‹</button>
