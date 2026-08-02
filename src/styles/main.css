@@ -118,16 +118,49 @@ select {
 /* Cards carousel */
 .credit-card {
   background: linear-gradient(135deg, var(--blue), #0ea5e9 55%, var(--teal));
+  background-size: cover;
+  background-position: center;
   border-radius: 20px;
   padding: 20px 20px 18px;
   box-shadow: var(--shadow), 0 8px 24px rgba(20, 184, 166, 0.22);
-  min-height: 150px;
+  min-height: 180px;
+  aspect-ratio: 1.586 / 1;
+  max-height: 220px;
   cursor: pointer;
   border: 0;
   width: 100%;
   text-align: left;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   color: #f8fafc;
+  overflow: hidden;
+  position: relative;
+}
+
+.credit-card--wizz {
+  box-shadow: var(--shadow), 0 10px 28px rgba(192, 38, 211, 0.28);
+}
+
+.credit-card--platinum {
+  box-shadow: var(--shadow), 0 10px 28px rgba(15, 15, 20, 0.55);
+}
+
+.credit-card--cash {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(250, 250, 250, 0.14), transparent 42%),
+    linear-gradient(145deg, #1a7f4b 0%, #0f3d2a 55%, #0b281c 100%);
+  box-shadow: var(--shadow), 0 10px 28px rgba(16, 185, 129, 0.22);
+}
+
+.credit-card--cash::after {
+  content: '💵';
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  font-size: 2rem;
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .credit-card__top {

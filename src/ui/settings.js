@@ -1,9 +1,10 @@
 import { getState, setState } from '../state/store.js';
 import { signOut } from '../services/auth.js';
-import { resetAllData } from '../services/reset.js';
+import { resetMonth } from '../services/reset.js';
 import { stopRealtime } from '../services/realtime.js';
 import { showToast } from './toast.js';
-import { openOnboarding } from './card-editor.js';
+import { DEFAULT_MONTHLY_AVAILABLE } from '../constants.js';
+import { formatEUR } from '../utils/money.js';
 
 export function mountSettings(parent) {
   const el = document.createElement('div');
@@ -11,7 +12,7 @@ export function mountSettings(parent) {
   el.innerHTML = `
     <button type="button" class="icon-btn settings__toggle" aria-label="Menu" title="Menu">⋮</button>
     <div class="settings__menu" hidden>
-      <button type="button" data-action="reset">Reset all data</button>
+      <button type="button" data-action="reset">Reset month (${formatEUR(DEFAULT_MONTHLY_AVAILABLE)})</button>
       <button type="button" data-action="signout">Sign out</button>
     </div>
   `;
@@ -48,22 +49,25 @@ export function mountSettings(parent) {
       return;
     }
     if (action === 'reset') {
-      if (!confirm('Delete all cards and transactions for this account? This cannot be undone.')) {
+      if (
+        !confirm(
+          `Reset the month? All expenses will be cleared and all cards (Wizz, Platinum, Cash) go back to ${formatEUR(DEFAULT_MONTHLY_AVAILABLE)}.`,
+        )
+      ) {
         return;
       }
       try {
         const userId = getState().user.id;
-        const data = await resetAllData(userId);
+        const data = await resetMonth(userId);
         setState({
           cards: data.cards,
           categories: data.categories,
           transactions: data.transactions,
           selectedCardIndex: 0,
           selectedCategoryId: data.categories[0]?.id || null,
-          needsOnboarding: true,
+          needsOnboarding: false,
         });
-        showToast('Data reset', 'success');
-        openOnboarding(data.cards);
+        showToast(`Reset — all cards at ${formatEUR(DEFAULT_MONTHLY_AVAILABLE)}`, 'success');
       } catch (err) {
         showToast(err.message || 'Reset failed', 'error');
       }

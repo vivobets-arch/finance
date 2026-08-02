@@ -2,8 +2,6 @@ import { mountCards } from './cards.js';
 import { mountExpenseForm } from './expense-form.js';
 import { mountTransactionList } from './transaction-list.js';
 import { mountSettings } from './settings.js';
-import { openOnboarding } from './card-editor.js';
-import { getState } from '../state/store.js';
 
 export function renderApp(container) {
   container.innerHTML = `
@@ -22,8 +20,4 @@ export function renderApp(container) {
   mountCards(main);
   mountExpenseForm(main);
   mountTransactionList(main);
-
-  if (getState().needsOnboarding) {
-    queueMicrotask(() => openOnboarding(getState().cards));
-  }
 }

@@ -1,7 +1,7 @@
 import { getState, setState } from '../state/store.js';
 import { updateCard } from '../services/cards.js';
 import { addTransaction } from '../services/transactions.js';
-import { availableForCard, formatEUR, parseAmount } from '../utils/money.js';
+import { availableForCard, formatEUR } from '../utils/money.js';
 import { openModal } from './modal.js';
 import { showToast } from './toast.js';
 
@@ -24,7 +24,7 @@ export function openCardEditor(card) {
       <label class="field">
         <span>Available balance (€)</span>
         <input class="input" name="available" inputmode="decimal" value="${escapeAttr(current.toFixed(2))}" />
-        <small class="field__hint">Current: ${formatEUR(current)}. Changing this adds an adjustment to the ledger.</small>
+        <small class="field__hint">Current: ${formatEUR(current)}. Tap a card anytime to edit name, limit, or available.</small>
       </label>
     `,
     onSubmit: async (formData, close) => {
@@ -62,55 +62,6 @@ export function openCardEditor(card) {
         close();
       } catch (err) {
         showToast(err.message || 'Could not update card', 'error');
-        throw err;
-      }
-    },
-  });
-}
-
-export function openOnboarding(cards) {
-  if (!cards?.length) return;
-  const card = cards[0];
-  openModal({
-    title: 'Set up your cards',
-    submitLabel: 'Continue',
-    bodyHtml: `
-      <p class="muted">Set an opening available balance for <strong>${escapeAttr(card.name)}</strong>. You can edit both cards anytime by tapping them.</p>
-      <label class="field">
-        <span>Opening available (€)</span>
-        <input class="input" name="available" inputmode="decimal" placeholder="0.00" />
-      </label>
-      <label class="field">
-        <span>Credit limit (€)</span>
-        <input class="input" name="credit_limit" inputmode="decimal" placeholder="0.00" value="0" />
-      </label>
-    `,
-    onSubmit: async (formData, close) => {
-      try {
-        const state = getState();
-        const limit = Number(String(formData.get('credit_limit') || '0').replace(',', '.')) || 0;
-        const amount = parseAmount(formData.get('available'));
-        const updated = await updateCard(card.id, { credit_limit: Math.max(0, limit) });
-        setState({
-          cards: state.cards.map((c) => (c.id === updated.id ? updated : c)),
-          needsOnboarding: false,
-        });
-        if (amount) {
-          const tx = await addTransaction({
-            userId: state.user.id,
-            cardId: card.id,
-            categoryId: null,
-            type: 'adjustment',
-            direction: 'credit',
-            amount,
-            description: 'Opening balance',
-          });
-          setState({ transactions: [tx, ...getState().transactions] });
-        }
-        showToast('You are ready to track expenses', 'success');
-        close();
-      } catch (err) {
-        showToast(err.message || 'Setup failed', 'error');
         throw err;
       }
     },

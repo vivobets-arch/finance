@@ -13,13 +13,35 @@ export function onAuthStateChange(callback) {
   return () => data.subscription.unsubscribe();
 }
 
-export async function sendMagicLink(email) {
-  const redirectTo = window.location.origin;
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim(),
-    options: { emailRedirectTo: redirectTo },
+/** Sign in with email/password. If the user does not exist, try to sign up. */
+export async function signInWithPassword(email, password) {
+  const trimmed = email.trim();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: trimmed,
+    password,
   });
-  if (error) throw error;
+
+  if (!error) return data.session;
+
+  // User missing or wrong credentials — try create, then sign in again
+  const { error: signUpError } = await supabase.auth.signUp({
+    email: trimmed,
+    password,
+  });
+
+  if (signUpError) {
+    // Prefer the original sign-in error if sign-up also fails (e.g. already registered + wrong password)
+    throw signUpError.message?.includes('already') || signUpError.message?.includes('registered')
+      ? error
+      : signUpError;
+  }
+
+  const retry = await supabase.auth.signInWithPassword({
+    email: trimmed,
+    password,
+  });
+  if (retry.error) throw retry.error;
+  return retry.data.session;
 }
 
 export async function signOut() {

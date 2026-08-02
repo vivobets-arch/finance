@@ -1,4 +1,5 @@
 import { getState, setState, subscribe } from '../state/store.js';
+import { presetForCard } from '../constants.js';
 import { availableForCard, formatEUR } from '../utils/money.js';
 import { openCardEditor } from './card-editor.js';
 
@@ -23,18 +24,25 @@ function render(state) {
 
   const index = Math.min(state.selectedCardIndex || 0, cards.length - 1);
   const card = cards[index];
+  const preset = presetForCard(card);
   const available = availableForCard(card.id, state.transactions);
   const negative = available < 0;
+  const isCash = preset.theme === 'cash';
+  const limitLabel = isCash ? 'Cash on hand' : `Limit ${formatEUR(card.credit_limit)}`;
+
+  const bgStyle = preset.image
+    ? `background-image: linear-gradient(180deg, rgba(8,12,24,.15), rgba(8,12,24,.72)), url('${preset.image}');`
+    : '';
 
   root.innerHTML = `
     <div class="carousel" data-carousel>
-      <article class="credit-card" data-edit-card>
+      <article class="credit-card credit-card--${preset.theme}" style="${bgStyle}" data-edit-card>
         <div class="credit-card__top">
           <span class="credit-card__name">${escapeHtml(card.name)}</span>
           <span class="credit-card__pos">${index + 1} / ${cards.length}</span>
         </div>
         <div class="credit-card__balance ${negative ? 'is-negative' : ''}">${formatEUR(available)}</div>
-        <div class="credit-card__meta">Limit ${formatEUR(card.credit_limit)} · tap to edit</div>
+        <div class="credit-card__meta">${limitLabel} · tap to edit</div>
       </article>
       <div class="carousel__controls">
         <button type="button" class="icon-btn" data-prev aria-label="Previous card">‹</button>

@@ -1,36 +1,39 @@
-import { sendMagicLink } from '../services/auth.js';
+import { signInWithPassword } from '../services/auth.js';
 import { showToast } from './toast.js';
 
 export function renderAuth(container) {
   container.innerHTML = `
     <section class="auth">
       <div class="auth__brand">FinanceTrack</div>
-      <p class="auth__lead">Sign in with a magic link. Same account syncs both phones.</p>
+      <p class="auth__lead">Sign in with email and password. Same account syncs both phones.</p>
       <form class="auth__form" id="auth-form">
         <label class="field">
           <span>Email</span>
-          <input class="input input--lg" type="email" name="email" autocomplete="email" required placeholder="you@example.com" />
+          <input class="input input--lg" type="email" name="email" autocomplete="email" required placeholder="you@example.com" value="freshproxy@gmail.com" />
         </label>
-        <button class="btn btn--primary btn--lg" type="submit" id="auth-submit">Send magic link</button>
+        <label class="field">
+          <span>Password</span>
+          <input class="input input--lg" type="password" name="password" autocomplete="current-password" required value="123" />
+        </label>
+        <button class="btn btn--primary btn--lg" type="submit" id="auth-submit">Sign in</button>
       </form>
-      <p class="auth__hint" id="auth-hint" hidden>Check your email for the sign-in link.</p>
     </section>
   `;
 
   const form = container.querySelector('#auth-form');
-  const hint = container.querySelector('#auth-hint');
   const submit = container.querySelector('#auth-submit');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = new FormData(form).get('email');
+    const data = new FormData(form);
+    const email = String(data.get('email') || '');
+    const password = String(data.get('password') || '');
     submit.disabled = true;
     try {
-      await sendMagicLink(String(email));
-      hint.hidden = false;
-      showToast('Magic link sent', 'success');
+      await signInWithPassword(email, password);
+      showToast('Signed in', 'success');
     } catch (err) {
-      showToast(err.message || 'Could not send link', 'error');
+      showToast(err.message || 'Sign in failed', 'error');
     } finally {
       submit.disabled = false;
     }
