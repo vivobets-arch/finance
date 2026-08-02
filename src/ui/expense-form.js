@@ -1,6 +1,8 @@
 import { getState, setState, subscribe } from '../state/store.js';
 import { addTransaction } from '../services/transactions.js';
+import { categoryIconChoices, createCategory } from '../services/categories.js';
 import { parseAmount } from '../utils/money.js';
+import { openModal } from './modal.js';
 import { showToast } from './toast.js';
 
 let root;
@@ -16,13 +18,19 @@ export function mountExpenseForm(parent) {
 function render(state) {
   if (!root) return;
   const categories = state.categories || [];
-  const selectedId = state.selectedCategoryId || categories[0]?.id || null;
+  // null = no category (allowed). Do not auto-pick the first chip.
+  const selectedId = state.selectedCategoryId;
+  const noneSelected = selectedId == null;
 
   const prevAmount = root.querySelector('[name="amount"]')?.value ?? '';
   const prevDesc = root.querySelector('[name="description"]')?.value ?? '';
 
   root.innerHTML = `
     <div class="category-row" role="listbox" aria-label="Category">
+      <button type="button" class="category-chip ${noneSelected ? 'is-selected' : ''}" data-cat-none title="No category">
+        <span class="category-chip__icon">—</span>
+        <span class="category-chip__label">None</span>
+      </button>
       ${categories
         .map(
           (c) => `
@@ -32,6 +40,10 @@ function render(state) {
         </button>`,
         )
         .join('')}
+      <button type="button" class="category-chip category-chip--add" data-add-category title="Add category">
+        <span class="category-chip__icon">➕</span>
+        <span class="category-chip__label">New</span>
+      </button>
     </div>
     <form id="expense-form">
       <label class="field">
@@ -46,11 +58,66 @@ function render(state) {
     </form>
   `;
 
+  root.querySelector('[data-cat-none]')?.addEventListener('click', () => {
+    setState({ selectedCategoryId: null });
+  });
+
   root.querySelectorAll('[data-cat]').forEach((btn) => {
     btn.addEventListener('click', () => setState({ selectedCategoryId: btn.dataset.cat }));
   });
 
+  root.querySelector('[data-add-category]')?.addEventListener('click', openAddCategory);
+
   root.querySelector('#expense-form').addEventListener('submit', onSubmit);
+}
+
+function openAddCategory() {
+  const icons = categoryIconChoices();
+  openModal({
+    title: 'New category',
+    submitLabel: 'Add',
+    bodyHtml: `
+      <label class="field">
+        <span>Name</span>
+        <input class="input" name="name" required maxlength="40" placeholder="e.g. Pharmacy" />
+      </label>
+      <fieldset class="field">
+        <span>Icon</span>
+        <div class="icon-picker">
+          ${icons
+            .map(
+              (icon, i) => `
+            <label class="icon-picker__option">
+              <input type="radio" name="icon" value="${icon}" ${i === 0 ? 'checked' : ''} />
+              <span>${icon}</span>
+            </label>`,
+            )
+            .join('')}
+        </div>
+      </fieldset>
+    `,
+    onSubmit: async (formData, close) => {
+      try {
+        const name = String(formData.get('name') || '').trim();
+        const icon = String(formData.get('icon') || '📌');
+        if (!name) throw new Error('Name is required');
+
+        const state = getState();
+        const category = await createCategory(state.user.id, { name, icon });
+        setState({
+          categories: [...state.categories, category].sort(
+            (a, b) => a.sort_order - b.sort_order,
+          ),
+          selectedCategoryId: category.id,
+        });
+        showToast('Category added', 'success');
+        close();
+      } catch (err) {
+        showToast(err.message || 'Could not add category', 'error');
+        throw err;
+      }
+    },
+  });
 }
 
 async function onSubmit(e) {
@@ -61,14 +128,10 @@ async function onSubmit(e) {
   const amount = parseAmount(form.amount.value);
   const description = String(form.description.value || '').trim();
   const card = state.cards[state.selectedCardIndex];
-  const categoryId = state.selectedCategoryId || state.categories[0]?.id;
+  const categoryId = state.selectedCategoryId || null;
 
   if (!card) {
     showToast('Select a card first', 'error');
-    return;
-  }
-  if (!categoryId) {
-    showToast('Pick a category', 'error');
     return;
   }
   if (!amount) {

@@ -8,12 +8,13 @@ export function openTransactionEditor(tx) {
   const state = getState();
   const isAdjustment = tx.type === 'adjustment';
 
-  const categoryOptions = (state.categories || [])
-    .map(
+  const categoryOptions = [
+    `<option value="" ${!tx.category_id ? 'selected' : ''}>— None</option>`,
+    ...(state.categories || []).map(
       (c) =>
         `<option value="${c.id}" ${c.id === tx.category_id ? 'selected' : ''}>${c.icon} ${escapeAttr(c.name)}</option>`,
-    )
-    .join('');
+    ),
+  ].join('');
 
   const cardOptions = (state.cards || [])
     .map(
@@ -30,7 +31,7 @@ export function openTransactionEditor(tx) {
         isAdjustment
           ? ''
           : `<label class="field"><span>Category</span>
-              <select class="input" name="category_id" required>${categoryOptions}</select>
+              <select class="input" name="category_id">${categoryOptions}</select>
             </label>`
       }
       <label class="field">
@@ -69,7 +70,8 @@ export function openTransactionEditor(tx) {
           card_id: String(formData.get('card_id')),
         };
         if (!isAdjustment) {
-          patch.category_id = String(formData.get('category_id'));
+          const cat = String(formData.get('category_id') || '').trim();
+          patch.category_id = cat || null;
         } else {
           patch.direction = String(formData.get('direction'));
           if (!patch.description) throw new Error('Description required');

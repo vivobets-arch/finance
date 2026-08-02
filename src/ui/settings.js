@@ -64,7 +64,7 @@ export function mountSettings(parent) {
           categories: data.categories,
           transactions: data.transactions,
           selectedCardIndex: 0,
-          selectedCategoryId: data.categories[0]?.id || null,
+          selectedCategoryId: null,
           needsOnboarding: false,
         });
         showToast(`Reset — all cards at ${formatEUR(DEFAULT_MONTHLY_AVAILABLE)}`, 'success');

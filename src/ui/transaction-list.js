@@ -32,7 +32,7 @@ function render(state) {
             const cat = catMap[t.category_id];
             const card = cardMap[t.card_id];
             const signed = signedAmount(t);
-            const icon = t.type === 'adjustment' ? '↺' : cat?.icon || '➕';
+            const icon = t.type === 'adjustment' ? '↺' : cat?.icon || '•';
             const title =
               t.type === 'adjustment'
                 ? t.description || 'Adjustment'
