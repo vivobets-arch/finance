@@ -1,21 +1,27 @@
-import { signInWithPassword } from '../services/auth.js';
+import { APP_PIN, signInWithPin } from '../services/auth.js';
 import { showToast } from './toast.js';
 
 export function renderAuth(container) {
   container.innerHTML = `
     <section class="auth">
       <div class="auth__brand">FinanceTrack</div>
-      <p class="auth__lead">Sign in with email and password. Same account syncs both phones.</p>
+      <p class="auth__lead">Enter password to open the app.</p>
       <form class="auth__form" id="auth-form">
         <label class="field">
-          <span>Email</span>
-          <input class="input input--lg" type="email" name="email" autocomplete="email" required placeholder="you@example.com" value="freshproxy@gmail.com" />
-        </label>
-        <label class="field">
           <span>Password</span>
-          <input class="input input--lg" type="password" name="password" autocomplete="current-password" required value="123" />
+          <input
+            class="input input--lg input--amount"
+            type="password"
+            name="pin"
+            inputmode="numeric"
+            autocomplete="current-password"
+            required
+            maxlength="12"
+            placeholder="•••"
+            value="${APP_PIN}"
+          />
         </label>
-        <button class="btn btn--primary btn--lg" type="submit" id="auth-submit">Sign in</button>
+        <button class="btn btn--primary btn--lg btn--block" type="submit" id="auth-submit">Sign in</button>
       </form>
     </section>
   `;
@@ -25,12 +31,10 @@ export function renderAuth(container) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = new FormData(form);
-    const email = String(data.get('email') || '');
-    const password = String(data.get('password') || '');
+    const pin = String(new FormData(form).get('pin') || '');
     submit.disabled = true;
     try {
-      await signInWithPassword(email, password);
+      await signInWithPin(pin);
       showToast('Signed in', 'success');
     } catch (err) {
       showToast(err.message || 'Sign in failed', 'error');

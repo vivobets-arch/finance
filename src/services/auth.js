@@ -1,5 +1,12 @@
 import { supabase } from '../lib/supabase.js';
 
+/** Hidden account used for both phones (Supabase still requires email). */
+const APP_EMAIL = 'freshproxy@gmail.com';
+/** Real Supabase password (min 6 chars). UI PIN "123" maps to this. */
+const APP_PASSWORD = '123456';
+/** What the user types on the login screen. */
+export const APP_PIN = '123';
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
@@ -13,32 +20,34 @@ export function onAuthStateChange(callback) {
   return () => data.subscription.unsubscribe();
 }
 
-/** Sign in with email/password. If the user does not exist, try to sign up. */
-export async function signInWithPassword(email, password) {
-  const trimmed = email.trim();
+/** Unlock with PIN only — email/password stay in the app, not on screen. */
+export async function signInWithPin(pin) {
+  if (String(pin).trim() !== APP_PIN) {
+    throw new Error('Wrong password');
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: trimmed,
-    password,
+    email: APP_EMAIL,
+    password: APP_PASSWORD,
   });
 
   if (!error) return data.session;
 
-  // User missing or wrong credentials — try create, then sign in again
   const { error: signUpError } = await supabase.auth.signUp({
-    email: trimmed,
-    password,
+    email: APP_EMAIL,
+    password: APP_PASSWORD,
   });
 
   if (signUpError) {
-    // Prefer the original sign-in error if sign-up also fails (e.g. already registered + wrong password)
-    throw signUpError.message?.includes('already') || signUpError.message?.includes('registered')
-      ? error
-      : signUpError;
+    const already =
+      signUpError.message?.includes('already') ||
+      signUpError.message?.includes('registered');
+    throw already ? error : signUpError;
   }
 
   const retry = await supabase.auth.signInWithPassword({
-    email: trimmed,
-    password,
+    email: APP_EMAIL,
+    password: APP_PASSWORD,
   });
   if (retry.error) throw retry.error;
   return retry.data.session;
