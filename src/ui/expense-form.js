@@ -6,24 +6,24 @@ import { openModal } from './modal.js';
 import { showToast } from './toast.js';
 
 let root;
+let unsub = null;
+/** Draft kept across re-renders; cleared after a successful add. */
+let draft = { amount: '', description: '' };
 
 export function mountExpenseForm(parent) {
+  if (unsub) unsub();
   root = document.createElement('section');
   root.className = 'expense-form';
   parent.appendChild(root);
-  subscribe(render);
+  unsub = subscribe(render);
   render(getState());
 }
 
 function render(state) {
   if (!root) return;
   const categories = state.categories || [];
-  // null = no category (allowed). Do not auto-pick the first chip.
   const selectedId = state.selectedCategoryId;
   const noneSelected = selectedId == null;
-
-  const prevAmount = root.querySelector('[name="amount"]')?.value ?? '';
-  const prevDesc = root.querySelector('[name="description"]')?.value ?? '';
 
   root.innerHTML = `
     <div class="category-row" role="listbox" aria-label="Category">
@@ -48,15 +48,23 @@ function render(state) {
     <form id="expense-form">
       <label class="field">
         <span>Description</span>
-        <input class="input" name="description" maxlength="120" placeholder="Optional" value="${escapeAttr(prevDesc)}" />
+        <input class="input" name="description" maxlength="120" placeholder="Optional" value="${escapeAttr(draft.description)}" />
       </label>
       <label class="field">
         <span>Amount (€)</span>
-        <input class="input input--amount" name="amount" inputmode="decimal" placeholder="0.00" required value="${escapeAttr(prevAmount)}" />
+        <input class="input input--amount" name="amount" inputmode="decimal" placeholder="0.00" required value="${escapeAttr(draft.amount)}" />
       </label>
       <button class="btn btn--primary btn--lg btn--block" type="submit" id="add-expense">Add Expense</button>
     </form>
   `;
+
+  const form = root.querySelector('#expense-form');
+  form.description.addEventListener('input', () => {
+    draft.description = form.description.value;
+  });
+  form.amount.addEventListener('input', () => {
+    draft.amount = form.amount.value;
+  });
 
   root.querySelector('[data-cat-none]')?.addEventListener('click', () => {
     setState({ selectedCategoryId: null });
@@ -68,7 +76,7 @@ function render(state) {
 
   root.querySelector('[data-add-category]')?.addEventListener('click', openAddCategory);
 
-  root.querySelector('#expense-form').addEventListener('submit', onSubmit);
+  form.addEventListener('submit', onSubmit);
 }
 
 function openAddCategory() {
@@ -150,9 +158,8 @@ async function onSubmit(e) {
       amount,
       description,
     });
+    draft = { amount: '', description: '' };
     setState({ transactions: [tx, ...getState().transactions.filter((t) => t.id !== tx.id)] });
-    form.amount.value = '';
-    form.description.value = '';
     showToast('Expense added', 'success');
   } catch (err) {
     showToast(err.message || 'Could not add expense', 'error');

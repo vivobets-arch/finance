@@ -5,12 +5,14 @@ import { openCardEditor } from './card-editor.js';
 
 let root;
 let startX = 0;
+let unsub = null;
 
 export function mountCards(parent) {
+  if (unsub) unsub();
   root = document.createElement('section');
   root.className = 'cards-panel';
   parent.appendChild(root);
-  subscribe(render);
+  unsub = subscribe(render);
   render(getState());
 }
 

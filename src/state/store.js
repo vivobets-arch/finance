@@ -7,6 +7,7 @@ const state = {
   transactions: [],
   selectedCardIndex: 0,
   selectedCategoryId: null,
+  view: 'home', // home | summary
   status: 'boot', // boot | auth | loading | ready
   error: null,
   toast: null,

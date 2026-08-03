@@ -41,6 +41,7 @@ export function mountSettings(parent) {
           cards: [],
           categories: [],
           transactions: [],
+          view: 'home',
           status: 'auth',
         });
       } catch (err) {

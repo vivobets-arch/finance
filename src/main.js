@@ -49,6 +49,7 @@ async function enterSession(session) {
       transactions: data.transactions,
       selectedCardIndex: 0,
       selectedCategoryId: null,
+      view: 'home',
       needsOnboarding: data.needsOnboarding,
       status: 'ready',
     });
