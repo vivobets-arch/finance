@@ -1,8 +1,6 @@
-import { getState, setState, subscribe } from '../state/store.js';
-import { softDeleteTransaction } from '../services/transactions.js';
+import { getState, subscribe } from '../state/store.js';
 import { formatEUR, signedAmount } from '../utils/money.js';
 import { openTransactionEditor } from './transaction-editor.js';
-import { showToast } from './toast.js';
 
 let root;
 let unsub = null;
@@ -24,11 +22,11 @@ function render(state) {
 
   root.innerHTML = `
     <div class="section-head">
-      <h2>Recent</h2>
+      <h2>Recent Transactions</h2>
     </div>
     ${
       txs.length === 0
-        ? `<p class="muted">No transactions yet.</p>`
+        ? `<div class="tx-empty"><span class="tx-empty__icon">💸</span><p>No transactions yet</p></div>`
         : `<ul class="tx-items">
         ${txs
           .slice(0, 40)
@@ -43,7 +41,7 @@ function render(state) {
                 : t.description || cat?.name || 'Expense';
             const when = formatWhen(t.occurred_at);
             return `
-              <li class="tx-row">
+              <li>
                 <button type="button" class="tx-item" data-id="${t.id}">
                   <span class="tx-item__icon">${icon}</span>
                   <span class="tx-item__body">
@@ -56,7 +54,6 @@ function render(state) {
                     signed >= 0 ? '+' : ''
                   }${formatEUR(signed)}</span>
                 </button>
-                <button type="button" class="tx-delete" data-delete="${t.id}" aria-label="Delete" title="Delete">✕</button>
               </li>`;
           })
           .join('')}
@@ -68,25 +65,6 @@ function render(state) {
     btn.addEventListener('click', () => {
       const tx = getState().transactions.find((t) => t.id === btn.dataset.id);
       if (tx) openTransactionEditor(tx);
-    });
-  });
-
-  root.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.delete;
-      if (!confirm('Delete this transaction?')) return;
-      btn.disabled = true;
-      try {
-        const updated = await softDeleteTransaction(id);
-        setState({
-          transactions: getState().transactions.filter((t) => t.id !== updated.id),
-        });
-        showToast('Transaction deleted', 'success');
-      } catch (err) {
-        showToast(err.message || 'Delete failed', 'error');
-        btn.disabled = false;
-      }
     });
   });
 }
