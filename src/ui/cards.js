@@ -2,6 +2,7 @@ import { getState, setState, subscribe } from '../state/store.js';
 import { presetForCard } from '../constants.js';
 import { availableForCard, formatEUR } from '../utils/money.js';
 import { openCardEditor } from './card-editor.js';
+import { openAddMoneyModal } from './add-money-modal.js';
 
 let root;
 let startX = 0;
@@ -54,10 +55,16 @@ function render(state) {
         </div>
         <button type="button" class="icon-btn" data-next aria-label="Next card">›</button>
       </div>
+      <div class="card-quick-actions">
+        <button type="button" class="btn btn--add-money" data-add-money>
+          <span>+</span> Add Money to ${escapeHtml(card.name)}
+        </button>
+      </div>
     </div>
   `;
 
   root.querySelector('[data-edit-card]')?.addEventListener('click', () => openCardEditor(card));
+  root.querySelector('[data-add-money]')?.addEventListener('click', () => openAddMoneyModal(card));
   root.querySelector('[data-prev]')?.addEventListener('click', () => shift(-1));
   root.querySelector('[data-next]')?.addEventListener('click', () => shift(1));
 

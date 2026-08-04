@@ -8,7 +8,7 @@ import { showToast } from './toast.js';
 let root;
 let unsub = null;
 /** Draft kept across re-renders; cleared after a successful add. */
-let draft = { amount: '', description: '' };
+let draft = { amount: '', description: '', txMode: 'expense' };
 
 export function mountExpenseForm(parent) {
   if (unsub) unsub();
@@ -24,37 +24,54 @@ function render(state) {
   const categories = state.categories || [];
   const selectedId = state.selectedCategoryId;
   const noneSelected = selectedId == null;
+  const isExpense = draft.txMode === 'expense';
 
   root.innerHTML = `
-    <div class="category-row" role="listbox" aria-label="Category">
-      <button type="button" class="category-chip ${noneSelected ? 'is-selected' : ''}" data-cat-none title="No category">
-        <span class="category-chip__icon">—</span>
-        <span class="category-chip__label">None</span>
+    <div class="form-mode-segmented">
+      <button type="button" class="form-mode-btn ${isExpense ? 'is-active' : ''}" data-mode="expense">
+        − Expense
       </button>
-      ${categories
-        .map(
-          (c) => `
-        <button type="button" class="category-chip ${c.id === selectedId ? 'is-selected' : ''}" data-cat="${c.id}" title="${escapeAttr(c.name)}">
-          <span class="category-chip__icon">${c.icon}</span>
-          <span class="category-chip__label">${escapeAttr(c.name)}</span>
-        </button>`,
-        )
-        .join('')}
-      <button type="button" class="category-chip category-chip--add" data-add-category title="Add category">
-        <span class="category-chip__icon">➕</span>
-        <span class="category-chip__label">New</span>
+      <button type="button" class="form-mode-btn ${!isExpense ? 'is-active' : ''}" data-mode="money">
+        + Add Money
       </button>
     </div>
+
+    ${
+      isExpense
+        ? `<div class="category-row" role="listbox" aria-label="Category">
+            <button type="button" class="category-chip ${noneSelected ? 'is-selected' : ''}" data-cat-none title="No category">
+              <span class="category-chip__icon">—</span>
+              <span class="category-chip__label">None</span>
+            </button>
+            ${categories
+              .map(
+                (c) => `
+              <button type="button" class="category-chip ${c.id === selectedId ? 'is-selected' : ''}" data-cat="${c.id}" title="${escapeAttr(c.name)}">
+                <span class="category-chip__icon">${c.icon}</span>
+                <span class="category-chip__label">${escapeAttr(c.name)}</span>
+              </button>`,
+              )
+              .join('')}
+            <button type="button" class="category-chip category-chip--add" data-add-category title="Add category">
+              <span class="category-chip__icon">➕</span>
+              <span class="category-chip__label">New</span>
+            </button>
+          </div>`
+        : ''
+    }
+
     <form id="expense-form">
       <label class="field">
         <span>Description</span>
-        <input class="input" name="description" maxlength="120" placeholder="Optional" value="${escapeAttr(draft.description)}" />
+        <input class="input" name="description" maxlength="120" placeholder="${isExpense ? 'Optional' : 'e.g. Salary, ATM, Deposit'}" value="${escapeAttr(draft.description)}" />
       </label>
       <label class="field">
         <span>Amount (€)</span>
         <input class="input input--amount" name="amount" inputmode="decimal" placeholder="0.00" required value="${escapeAttr(draft.amount)}" />
       </label>
-      <button class="btn btn--primary btn--lg btn--block" type="submit" id="add-expense">Add Expense</button>
+      <button class="btn ${isExpense ? 'btn--primary' : 'btn--income'} btn--lg btn--block" type="submit" id="add-expense">
+        ${isExpense ? 'Add Expense' : 'Add Money (+)'}
+      </button>
     </form>
   `;
 
@@ -64,6 +81,13 @@ function render(state) {
   });
   form.amount.addEventListener('input', () => {
     draft.amount = form.amount.value;
+  });
+
+  root.querySelectorAll('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      draft.txMode = btn.dataset.mode;
+      render(getState());
+    });
   });
 
   root.querySelector('[data-cat-none]')?.addEventListener('click', () => {
@@ -136,7 +160,8 @@ async function onSubmit(e) {
   const amount = parseAmount(form.amount.value);
   const description = String(form.description.value || '').trim();
   const card = state.cards[state.selectedCardIndex];
-  const categoryId = state.selectedCategoryId || null;
+  const isExpense = draft.txMode === 'expense';
+  const categoryId = isExpense ? state.selectedCategoryId || null : null;
 
   if (!card) {
     showToast('Select a card first', 'error');
@@ -153,16 +178,16 @@ async function onSubmit(e) {
       userId: state.user.id,
       cardId: card.id,
       categoryId,
-      type: 'expense',
-      direction: 'debit',
+      type: isExpense ? 'expense' : 'adjustment',
+      direction: isExpense ? 'debit' : 'credit',
       amount,
-      description,
+      description: description || (isExpense ? '' : 'Cash deposit'),
     });
-    draft = { amount: '', description: '' };
+    draft = { amount: '', description: '', txMode: draft.txMode };
     setState({ transactions: [tx, ...getState().transactions.filter((t) => t.id !== tx.id)] });
-    showToast('Expense added', 'success');
+    showToast(isExpense ? 'Expense added' : `+€${amount.toFixed(2)} added to ${card.name}`, 'success');
   } catch (err) {
-    showToast(err.message || 'Could not add expense', 'error');
+    showToast(err.message || 'Could not add transaction', 'error');
   } finally {
     submit.disabled = false;
   }
